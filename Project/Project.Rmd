@@ -1,0 +1,322 @@
+---
+title: "Investigation of Insurance Charges"
+author: "Adrien Sesco"
+output: html_notebook
+---
+
+# Libraries
+
+```{r}
+library(tidyverse)
+```
+
+# Functions & Read in Data
+
+```{r}
+z_scores <- function(datain) {
+  data_mean <- mean(datain)
+  data_min <- min(datain)
+  data_max <- max(datain)
+  data_sd <- sd(datain)
+  
+  dist_of_min <- (data_min - data_mean) / data_sd
+  dist_of_max <- (data_max - data_mean) / data_sd
+  return(c(dist_of_min, dist_of_max))
+}
+```
+
+
+
+```{r}
+data <- read.csv("../Data/changed_nov2_insurance.csv")
+```
+
+
+# Summary
+
+> The project aimed to find how variables about lifestyle and health contributed to the price of insurance. Visual analysis was used with a linear model added in ggplot2 with facet wraps and color-coding for categorical variables to reach my conclusions. This analysis that BMI is positively correlated with charge and smoking increases the charge at every BMI and the other variables present did not significantly impact the cost of insurance. This analysis is limited by the size of the data and should not be used for real-world applications, but its findings suggest what would be found by analyzing a more complete data set
+
+
+# Purpose
+
+> The purpose of the project is to examine the relationship between the health and lifestyle variables present and the resulting charge for insurance 
+
+# Data
+
+## Description
+
+
+- variable_name: what the variable is representing, numerical or categorical
+
+
+- age: the age of the person the row is about, numerical
+- sex: the sex of the person the row is about, categorical
+- bmi: the body mass index of the person the row is about, numerical
+- children: the number of children the person the row is about has, numerical
+- smoker: whether or not the person the row is about smokes, categorical 
+- region: where the person the row is about lives, categorical
+- charges: how much the person the row is about is charged for insurance in USD, numerical
+
+## Missing/NA
+
+> There were no NA's and none were introduced by coersion
+  
+## Methodology for Cleaning Data
+
+```{r}
+#data$smoker <- (data$smoker == "yes")
+```
+
+> Smoker was changed from "yes" and "no" to TRUE and FALSE with the above code which is commented out to avoid breaking visualizations and analyses below
+
+# Exploratory Data Analysis
+- Numerical and Visual Descriptive Statistics
+
+
+```{r}
+summary(data)
+```
+
+> This means that the data includes ages between 18 and 64 with the mean at 39.21 with charges from 1122 to 63770 with the mean at 13270. This also includes BMI, which ranges from 15.96 to 53.13 with the mean at 30.66 where normal weight is 18.5 to 24.9 such that a BMI below that range is underweight and a BMI above that range is overweight. The data also includes the number of children which ranges from 0 to 5 with the mean at 1.095. There are also categories for the region and sex of the person and whether or not they smoke.
+  
+
+```{r}
+standard_divs <- data.frame(
+  variable = c("age", "bmi", "children", "charges"),
+  standard_div = c(sd(data$age), sd(data$bmi), sd(data$children), sd(data$charges))
+)
+```
+
+```{r}
+standard_divs
+```
+
+> Standard deviations of the numerical variables the data.
+
+> Standard deviation is used as a metric of how spread out the data is. This is important as a high spread means the data is inconsistent.
+
+```{r}
+z_scores(data$charges)
+```
+
+> The minimum charge is 1.00 standard deviation from the mean while the max is 4.17 standard deviations away which means the data is skewed to the right. In other words, there are more observances close to the min than the max.
+
+
+```{r}
+data %>% 
+  ggplot(aes(charges)) +
+  geom_histogram(fill = "purple", color = "black") +
+  labs(x = "Insurance cost", y = "Frequency", title = "Distribution of Insurance Charges")
+```
+
+> From the histogram and the z-scores, the cost of insurance does not follow a normal distribution. If it did, the most frequent occurance would be in the middle with less on both the left and right. The histogram being the shape that it is agrees with the standard deviation that the data is skewed to the right. 
+
+```{r}
+z_scores(data$age)
+```
+> The minimum is 1.51 standard deviations from the mean and the maximum is 1.76 standard deviations from the mean. This also suggests that the data is skewed right. There are more observances close to the min than the max
+
+```{r}
+data %>% 
+  ggplot(aes(age)) +
+  geom_histogram(binwidth = 1, fill = "orange", color = "black") +
+  labs(x = "Age of purchaser", y = "Frequency", title = "Distribution of Ages Paying for Insurance")
+```
+
+> The most common age people purchase insurance at is 18 followed by 19. This is an artifact in the data which means that it cannot be explained by the data. This is a limitation of the dataset for the project.
+
+```{r}
+z_scores(data$children)
+```
+> The minimum is 0.91 stanbdard deviations away from the mean and the maximum is 3.24 standard deviations away from the mean. This also suggests a skew to the right. There are more observances close to the min than the max.
+
+```{r}
+data %>% 
+  ggplot(aes(children)) +
+  geom_histogram(fill = "darkgreen", color = "black") +
+  labs(x = "Number of children", y = "Frequency", title = "Distribution of number of children by insurance purchasers")
+```
+
+> Most insurance purchasers are childfree
+
+```{r}
+z_scores(data$bmi)
+```
+> The minimum is 2.41 stanbdard deviations away from the mean and the maximum is 3.68 standard deviations away from the mean. There are more observances close to the min than the max but this is fairly close to a normal distribution so there is only a slight skew if any.
+
+```{r}
+data %>% 
+  ggplot(aes(bmi)) +
+  geom_histogram(fill = "white", color = "black") +
+  labs(x = "BMI of purchaser", y = "Frequency", title = "Distribution of BMI of insurance purchasers")
+```
+
+```{r}
+mean(data$bmi)
+```
+
+
+> Pretty much follows normal distribution with the mean at 30.66 which is classified as obese. This increases risk for many medical conditions and is connected with a lower life expectancy which means that the insurance company is more likely to have to pay out. This fact means that the company has to charge the individual more to get the same profit as they would on a healthier person.
+
+```{r}
+data %>% 
+  filter(smoker == TRUE)
+```
+
+
+
+```{r}
+data %>% 
+  ggplot(aes(smoker)) +
+  geom_bar(fill = "pink", color = "lightblue") +
+  labs(x = "Smoker (FALSE/TRUE)", y = "Frequency", title = "Frequency of smoking among insurance purchasers")
+```
+
+> An overwhelming majority of people buying insurance are not smokers.
+
+
+
+```{r}
+data %>% 
+  ggplot(aes(sex)) +
+  geom_bar(fill = "orange", color = "lightblue") +
+  labs(x = "Sex (female/male)", y = "Frequency", title = "Frequency of sex of insurance purchasers")
+```
+
+> More men pay for insurance than women but not by much.
+
+
+```{r}
+data %>% 
+  ggplot(aes(region)) +
+  geom_bar(fill = "tan", color = "white") +
+  labs(x = "Region of purchaser", y = "Frequency", title = "Frequency of region of insurance purchasers")
+```
+
+> Most purchasers live in the southeast as the southeast is the most populous region of America.
+
+
+> Explaining "lm" Method
+
+> LM means linear model. It is a very basic tool in statistics that is used to show the relationship between a dependent and independent variable. Essentially, it is a straight line showing about where the dependent variable should be given the independent variable's value. Linear models are widely used and trusted with a 95% confidence level. 
+
+> This is the same as a line of best fit.
+
+```{r}
+data %>% 
+  ggplot(aes(x = bmi, y = charges, color = smoker)) +
+  geom_line() +
+  geom_smooth(method = "lm") +
+  #geom_point() +
+  facet_wrap(~ region) +
+  scale_color_manual(values =
+    c("TRUE" = "darkred",
+      "FALSE" = "lightblue")
+  ) +
+  labs(
+    title = "Correlation of BMI, Smoking, and Charge by Region",
+    x = "BMI (underweight < 18.5 - 24.9 < overweight)",
+    y = "Charges (USD)"
+  ) 
+```
+
+> This graph shows that insurance charges are a function of BMI with smoking shifting the cost up. There is some variation between the regions with the southeast varying the most from the general trend where individuals over 50 BMI that did not smoke paid less than those at ~20 BMI that did not smoke. 
+
+> This can be used to say that a smoker with a BMI of 55 in the southwest will pay roughly $75,000.
+
+> The variables bmi, charges, smoker(true/false), and region were used to make this visualization.
+
+```{r}
+data %>% 
+  ggplot(aes(x = bmi, y = charges, color = children)) +
+  geom_line() +
+  geom_smooth(method = "lm") +
+  #geom_point() +
+  facet_wrap(~ region) +
+  scale_color_gradient(low = "lightblue", high = "darkred") + 
+  labs(
+    title = "Correlation of BMI, Number of Children, and Charge by Region",
+    x = "BMI (underweight < 18.5 - 24.9 < overweight)",
+    y = "Charges (USD)"
+  ) 
+```
+> This graph shows that the number of children a person has does not largely impact the cost of insurance. 
+
+> This can be used to rule out children having a significant impact on the price of insurance.
+
+> The variables bmi, charges, children, and region were used to make this visualization.
+
+```{r}
+data %>% 
+  ggplot(aes(x = bmi, y = charges, color = sex)) +
+  geom_line() +
+  geom_smooth(method = "lm") +
+  #geom_point() +
+  facet_wrap(~ region) +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Correlation of BMI, Sex, and Charge by Region",
+    x = "BMI (underweight < 18.5 - 24.9 < overweight)",
+    y = "Charges (USD)"
+  ) 
+```
+
+> This graph shows that charge is mainly a function of BMI with men paying more than women as BMI approaches the upper limit of what is represented in the data.
+
+> This can be used to predict that a man in the southwest with a BMI of 50 will pay more than a woman in the same location with the same BMI. 
+
+> The variables bmi, charges, sex(female/male), and region were used to make this visualization.
+
+
+```{r}
+# Rounding BMI for the next visualization
+rounded_data <- data
+rounded_data$bmi <- round(rounded_data$bmi)
+```
+
+
+```{r}
+rounded_data %>% 
+  group_by(bmi) %>% 
+  mutate(
+    avg_charge_by_bmi = mean(charges)
+  ) %>% 
+  ggplot(aes(x = bmi, y = avg_charge_by_bmi)) +
+  geom_line() +
+  #geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ region) +
+  labs(
+    title = "Average Cost of Insurance by Rounded BMI in Regions of America",
+    x = "BMI (underweight < 18.5 - 24.9 < overweight)",
+    y = "Average Charge"
+  )
+  
+```
+> This graph shows that, with some exceptions, BMI is positively correlated (straight line; as one goes up the other also goes up) with the cost of insurance. 
+
+> This can be used to predict that the average cost of insurance for someone in the southwest with a BMI of 50 will be slightly above $20,000.
+
+> The variables BMI, charges, and region where BMI is rounded to the nearest whole number and charges is an average of the charge for that rounded BMI were used to make this visualization.
+
+# Results
+
+## Analysis Method
+
+> The data was analyzed by comparing the trends visually with facet wraps and color coding for categorical data.
+
+## Reasoning 
+
+> This method of analysis was used because there are multiple categorical variables initially believed to impact the charge. If these variabels were not seperated in the charts, then any prediction made from the charts would be inaccurate and no prediction could be made for any one specific categorical variable.
+
+## Explanation
+
+> The project found that BMI and charge are positively correlated with smoking raising the charge at every BMI. Sex did contribute to cost but it was not nearly as significant as smoking and BMI. None of the other variables impacted the cost of insurance.
+
+# Conclusions
+
+> In conclusion, the project found that BMI and charge are positively correlated. This is due to the fact that BMI decreases life expectancy and increases the likelihood that the insurance company will have to pay out. This means that they must charge more or risk losing profit to provide care to their customers. Likewise, smoking also had a big impact on the charge as smoking also decreases life expectancy. Sex contributed slightly and varied differently in each region. Region also showed slightly different trends, but the data is not able to explain why as it is limited compared to what is used to calculate the charge. None of the other variables contributed to the charge. There are clearly other variables that would contribute to the charge in real-life applications, but they are not included in this data set which is its main limitation. 
+
+# Referneces 
+
+> https://www.kaggle.com/datasets/mosapabdelghany/medical-insurance-cost-dataset/data
